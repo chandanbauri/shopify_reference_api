@@ -92,6 +92,7 @@ class DB {
         }
     };
 
+    /* api for getting the list of all the documents from the specified collection */
     getList = async (req, res, next) => {
         const { collectionaName } = req.body
         if (collectionaName !== null && typeof collectionaName == 'string') {
@@ -218,7 +219,7 @@ class DB {
     };
 
 
-    
+
 
 
 
