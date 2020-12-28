@@ -32,8 +32,8 @@ class DB {
     /* method for inserting a document */
 
     InsertOne = (req, res, next) => {
-        const { collectionName, document} = req.body;
-        
+        const { collectionName, document } = req.body;
+
         if (collectionName !== null && typeof collectionName == 'string') {
             MongoCLient.connect(mongoURL, mongoPromises, async (err, client) => {
                 if (err) {
@@ -64,7 +64,7 @@ class DB {
                                         }); // if product already exists 
                                 } else {
                                     if (document.name == null) {
-                                        req
+                                        res
                                             .status(500).
                                             send({
                                                 success: false,
@@ -75,7 +75,7 @@ class DB {
                                         await db.collection(collectionName).insertOne(document)
                                             .then((response) => {
                                                 //console.log(response.insertedCount);
-                                                req
+                                                res
                                                     .status(200).
                                                     send({
                                                         success: true,
@@ -88,7 +88,7 @@ class DB {
                                             })
                                             .catch((err) => {
                                                 console.log(err);
-                                                req
+                                                res
                                                     .status(500)
                                                     .send({
                                                         success: false,
@@ -104,7 +104,7 @@ class DB {
                             })
                             .catch((err) => {
                                 console.log(err);
-                                req.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
+                                res.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
                             })
 
 
@@ -114,28 +114,33 @@ class DB {
             });
         }
         else {
-            req.status = { success: false, message: 'Invalid Colleaction Name' };
+            res
+                .status(404)
+                .send({
+                    success: false,
+                    message: `collection ${collectionName} not found.`
+                });
         }
     };
 
     /* api for getting the list of all the documents from the specified collection */
     getList = async (req, res, next) => {
-        const { collectionaName } = req.body
-        if (collectionaName !== null && typeof collectionaName == 'string') {
+        const { collectionName } = req.body
+        if (collectionName !== null && typeof collectionName == 'string') {
             MongoCLient.connect(mongoURL, mongoPromises, async (err, client) => {
                 if (err) {
-                    req.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
+                    res.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
                     throw err;
                 }
                 let db = client.db(dbName);
 
-                await db.collection(collectionaName).find({}).toArray()
+                await db.collection(collectionName).find({}).toArray()
                     .then((response) => {
                         if (response.length == 0) {
-                            req.status(404).send({ success: false, message: 'no Document Found' }); // if some internal error occurs
+                            res.status(404).send({ success: false, message: 'no Document Found' }); // if some internal error occurs
                         } else {
                             console.log(response);
-                            req.status(200).send({ success: true, [`${collectionaName}_list`]: response }); // if some internal error occurs
+                            res.status(200).send({ success: true, [`${collectionName}_list`]: response }); // if some internal error occurs
                         }
                     })
                     .finally(() => {
@@ -145,14 +150,14 @@ class DB {
 
                     })
                     .catch((err) => {
-                        req.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
+                        res.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
                         throw err;
                     });
 
             });
         }
         else {
-            req.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
+            res.status(404).send({ success: false, message: 'enter a valid CollectionName' }); // if some internal error occurs
         }
     }
     // api for getting a item details for the specified id and collection name
@@ -276,33 +281,33 @@ class DB {
                                     });
                                 throw err;
                             }
-                            else{
-                                if(collection){
+                            else {
+                                if (collection) {
                                     await db
-                                    .collection(collectionName)
-                                    .deleteOne({_id: ObjectID(id)})
-                                    .then((response)=>{
-                                        if(response){
-                                            res
-                                            .status(200)
-                                            .send({
-                                                success: true,
-                                                message: `${collectionName} deleted successfully`
-                                            })
-                                        }
-                                    })
-                                    .finally(()=>{
-                                        client.close();
-                                        next()
-                                    })
-                                    .catch((err)=>{
-                                        res
-                                        .status(500)
-                                        .send({
-                                            success: false,
-                                            message: 'some internal error has occured'    
+                                        .collection(collectionName)
+                                        .deleteOne({ _id: ObjectID(id) })
+                                        .then((response) => {
+                                            if (response) {
+                                                res
+                                                    .status(200)
+                                                    .send({
+                                                        success: true,
+                                                        message: `${collectionName} deleted successfully`
+                                                    })
+                                            }
                                         })
-                                    })
+                                        .finally(() => {
+                                            client.close();
+                                            next()
+                                        })
+                                        .catch((err) => {
+                                            res
+                                                .status(500)
+                                                .send({
+                                                    success: false,
+                                                    message: 'some internal error has occured'
+                                                })
+                                        })
                                 }
                             }
                         })
