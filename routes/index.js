@@ -4,6 +4,7 @@ const { Db } = require("mongodb");
 
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
+router.use(bodyParser.raw());
 const DB = require('../DB/DB');
 const db = new DB();
 //api request to insert one doc to the specified collection

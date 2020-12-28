@@ -32,8 +32,8 @@ class DB {
     /* method for inserting a document */
 
     InsertOne = (req, res, next) => {
-        const { collectionName, name } = req.body;
-        const document = { name: name };
+        const { collectionName, document} = req.body;
+        
         if (collectionName !== null && typeof collectionName == 'string') {
             MongoCLient.connect(mongoURL, mongoPromises, async (err, client) => {
                 if (err) {
@@ -250,10 +250,10 @@ class DB {
     } */
 
     findAndDelete = (req, res, next) => {
-        const { collectionName, document } = req.body;
-
+        const { collectionName, id } = req.body;
+        console.log(req.body);
         if (collectionName != null && typeof collectionName == 'string') {
-            MongoCLient.connect(mongoURL, mongoPromises, (err, client) => {
+            MongoCLient.connect(mongoURL, mongoPromises, async (err, client) => {
                 if (err) {
                     res
                         .status(500)
@@ -280,7 +280,7 @@ class DB {
                                 if(collection){
                                     await db
                                     .collection(collectionName)
-                                    .deleteOne({_id: ObjectID(document.id)})
+                                    .deleteOne({_id: ObjectID(id)})
                                     .then((response)=>{
                                         if(response){
                                             res
