@@ -37,7 +37,13 @@ class DB {
         if (collectionName !== null && typeof collectionName == 'string') {
             MongoCLient.connect(mongoURL, mongoPromises, async (err, client) => {
                 if (err) {
-                    req.status = { success: false, message: 'there is some issue on the server' }; // if some internal error occurs
+                    req
+                        .status(500)
+                        .send(
+                            {
+                                success: false,
+                                message: 'there is some issue on the server'
+                            }); // if some internal error occurs
                     throw err;
                 };
 
@@ -50,16 +56,31 @@ class DB {
                         await db.collection(collectionName).findOne({ name: document.name }) // checking if the product already exists
                             .then(async (findValue) => {
                                 if (findValue) {
-                                    req.status = { success: false, message: " Product Already exist! " }; // if product already exists 
+                                    res
+                                        .status(409)
+                                        .send({
+                                            success: false,
+                                            message: ` ${collectionName} Already exist! `
+                                        }); // if product already exists 
                                 } else {
                                     if (document.name == null) {
-                                        req.status = { success: false, message: " Please enter a valid product name! " };
+                                        req
+                                            .status(500).
+                                            send({
+                                                success: false,
+                                                message: " Please enter a valid product name! "
+                                            });
                                     }
                                     else {
                                         await db.collection(collectionName).insertOne(document)
                                             .then((response) => {
                                                 //console.log(response.insertedCount);
-                                                req.status = { success: true, message: " Product Added successfully! " }; // if insetion is successful
+                                                req
+                                                    .status(200).
+                                                    send({
+                                                        success: true,
+                                                        message: `${collectionName} Added successfully! `
+                                                    }); // if insetion is successful
                                             })
                                             .finally(() => {
                                                 client.close();
@@ -67,7 +88,12 @@ class DB {
                                             })
                                             .catch((err) => {
                                                 console.log(err);
-                                                req.status = { success: false, message: 'there is some issue on the server' }; // if some internal error occurs
+                                                req
+                                                    .status(500)
+                                                    .send({
+                                                        success: false,
+                                                        message: 'there is some issue on the server'
+                                                    }); // if some internal error occurs
                                             })
                                     }
                                 }
@@ -78,7 +104,7 @@ class DB {
                             })
                             .catch((err) => {
                                 console.log(err);
-                                req.status = { success: false, message: 'there is some issue on the server' }; // if some internal error occurs
+                                req.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
                             })
 
 
@@ -98,7 +124,7 @@ class DB {
         if (collectionaName !== null && typeof collectionaName == 'string') {
             MongoCLient.connect(mongoURL, mongoPromises, async (err, client) => {
                 if (err) {
-                    req.status = { success: false, message: 'there is some issue on the server' }; // if some internal error occurs
+                    req.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
                     throw err;
                 }
                 let db = client.db(dbName);
@@ -106,10 +132,10 @@ class DB {
                 await db.collection(collectionaName).find({}).toArray()
                     .then((response) => {
                         if (response.length == 0) {
-                            req.status = { success: false, message: 'no Document Found' }; // if some internal error occurs
+                            req.status(404).send({ success: false, message: 'no Document Found' }); // if some internal error occurs
                         } else {
                             console.log(response);
-                            req.status = { success: true, [`${collectionaName}_list`]: response }; // if some internal error occurs
+                            req.status(200).send({ success: true, [`${collectionaName}_list`]: response }); // if some internal error occurs
                         }
                     })
                     .finally(() => {
@@ -119,14 +145,14 @@ class DB {
 
                     })
                     .catch((err) => {
-                        req.status = { success: false, message: 'there is some issue on the server' }; // if some internal error occurs
+                        req.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
                         throw err;
                     });
 
             });
         }
         else {
-            req.status = { success: false, message: 'Invalid Collection Name' }; // if some internal error occurs
+            req.status(500).send({ success: false, message: 'there is some issue on the server' }); // if some internal error occurs
         }
     }
     // api for getting a item details for the specified id and collection name
@@ -218,9 +244,80 @@ class DB {
         }
     };
 
+    /* InsretMany = async (req,res,next) =>{
+        const { collectionName ,document} = req.body;
+        console.log(document);
+    } */
 
+    findAndDelete = (req, res, next) => {
+        const { collectionName, document } = req.body;
 
+        if (collectionName != null && typeof collectionName == 'string') {
+            MongoCLient.connect(mongoURL, mongoPromises, (err, client) => {
+                if (err) {
+                    res
+                        .status(500)
+                        .send({
+                            success: false,
+                            message: 'some internal error has occured ! '
+                        });
+                    throw err;
+                }
+                else {
+                    const db = client.db(dbName);
+                    await db.listCollections({ name: collectionName })
+                        .next(async (err, collection) => {
+                            if (err) {
+                                res
+                                    .status(500)
+                                    .send({
+                                        success: false,
+                                        message: 'some internal error has occured ! '
+                                    });
+                                throw err;
+                            }
+                            else{
+                                if(collection){
+                                    await db
+                                    .collection(collectionName)
+                                    .deleteOne({_id: ObjectID(document.id)})
+                                    .then((response)=>{
+                                        if(response){
+                                            res
+                                            .status(200)
+                                            .send({
+                                                success: true,
+                                                message: `${collectionName} deleted successfully`
+                                            })
+                                        }
+                                    })
+                                    .finally(()=>{
+                                        client.close();
+                                        next()
+                                    })
+                                    .catch((err)=>{
+                                        res
+                                        .status(500)
+                                        .send({
+                                            success: false,
+                                            message: 'some internal error has occured'    
+                                        })
+                                    })
+                                }
+                            }
+                        })
+                }
+            })
 
+        } else {
+            res
+                .status(404)
+                .send({
+                    success: false,
+                    message: 'please enter a valid collection Name'
+                })
+        }
+    }
 
 
 
